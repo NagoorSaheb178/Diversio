@@ -295,9 +295,9 @@ All three are inside the cycle. No employee merely reports *into* the cycle with
 
 | Phase | Approximate time |
 |-------|-----------------|
-| Implementation (coding + testing) | ~90 minutes |
+| Implementation (coding + testing) | ~65 minutes |
 | Narrated video walkthrough | ~10 minutes |
-| **Total** | ~100 minutes |
+| **Total** | ~75 minutes |
 
 ---
 
