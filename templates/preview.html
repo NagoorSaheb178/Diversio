@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import Preview — {{ filename }} — Diversio</title>
+  <meta name="description" content="HRIS import preview showing validation results, hierarchy, and reporting cycles." />
+  <style>
+    /* ── Design tokens ───────────────────────────────────────────────────── */
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #20243a;
+      --border: #2a2d3a;
+      --accent: #6c63ff;
+      --accent2: #4ecdc4;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --success: #4ade80;
+      --danger: #ff6b6b;
+      --warning: #fbbf24;
+      --info: #60a5fa;
+      --radius: 10px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      flex-wrap: wrap;
+    }
+
+    .logo-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      flex-shrink: 0;
+    }
+
+    .topbar h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .topbar .file-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .85rem;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    .back-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: .85rem;
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      transition: opacity .15s;
+    }
+
+    .back-link:hover {
+      opacity: .75;
+    }
+
+    /* ── Summary cards ───────────────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--card-color, var(--accent));
+    }
+
+    .stat-card.green {
+      --card-color: var(--success);
+    }
+
+    .stat-card.red {
+      --card-color: var(--danger);
+    }
+
+    .stat-card.yellow {
+      --card-color: var(--warning);
+    }
+
+    .stat-card.blue {
+      --card-color: var(--info);
+    }
+
+    .stat-card.purple {
+      --card-color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .4rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-card.green .stat-value {
+      color: var(--success);
+    }
+
+    .stat-card.red .stat-value {
+      color: var(--danger);
+    }
+
+    .stat-card.yellow .stat-value {
+      color: var(--warning);
+    }
+
+    .stat-card.blue .stat-value {
+      color: var(--info);
+    }
+
+    .stat-card.purple .stat-value {
+      color: var(--accent);
+    }
+
+    /* ── Section ─────────────────────────────────────────────────────────── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+    }
+
+    .section-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .15rem .65rem;
+      font-size: .75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .badge.red {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(255, 107, 107, .1);
+    }
+
+    .badge.green {
+      border-color: var(--success);
+      color: var(--success);
+      background: rgba(74, 222, 128, .1);
+    }
+
+    .badge.yellow {
+      border-color: var(--warning);
+      color: var(--warning);
+      background: rgba(251, 191, 36, .1);
+    }
+
+    .badge.blue {
+      border-color: var(--info);
+      color: var(--info);
+      background: rgba(96, 165, 250, .1);
+    }
+
+    .chevron {
+      transition: transform .2s;
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    .section-header[aria-expanded="false"] .chevron {
+      transform: rotate(-90deg);
+    }
+
+    .section-body {
+      padding: 0;
+    }
+
+    .section-body[hidden] {
+      display: none;
+    }
+
+    /* ── Tables ──────────────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, .03);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .7rem 1.2rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: .65rem 1.2rem;
+      border-bottom: 1px solid rgba(42, 45, 58, .6);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .row-num {
+      color: var(--muted);
+      font-size: .8rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .err-text {
+      color: var(--danger);
+    }
+
+    .err-pill {
+      display: inline-block;
+      background: rgba(255, 107, 107, .12);
+      border: 1px solid rgba(255, 107, 107, .3);
+      color: var(--danger);
+      border-radius: 4px;
+      padding: .1rem .5rem;
+      font-size: .78rem;
+      margin: .15rem .1rem;
+    }
+
+    .warn-pill {
+      display: inline-block;
+      background: rgba(251, 191, 36, .1);
+      border: 1px solid rgba(251, 191, 36, .3);
+      color: var(--warning);
+      border-radius: 4px;
+      padding: .1rem .5rem;
+      font-size: .78rem;
+      margin: .15rem .1rem;
+    }
+
+    .mono {
+      font-family: 'Menlo', 'Consolas', monospace;
+      font-size: .82rem;
+    }
+
+    /* ── Tag list ─────────────────────────────────────────────────────────── */
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+    }
+
+    .tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .1rem .5rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────────────── */
+    .empty {
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    /* ── Print / utility ─────────────────────────────────────────────────── */
+    @media print {
+      .topbar .back-link {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <div class="logo-dot"></div>
+    <h1>Import Preview</h1>
+    <span class="file-chip">{{ filename }}</span>
+    <a class="back-link" href="{% url 'upload' %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 5l-7 7 7 7" />
+      </svg>
+      Upload another
+    </a>
+  </div>
+
+  <!-- ── Summary cards ──────────────────────────────────────────────────── -->
+  <div class="summary-grid">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Source Rows</div>
+      <div class="stat-value">{{ total_source_rows }}</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Accepted Employees</div>
+      <div class="stat-value">{{ accepted_count }}</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Invalid Rows</div>
+      <div class="stat-value">{{ invalid_count }}</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Manager Errors</div>
+      <div class="stat-value">{{ error_count }}</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Root Employees</div>
+      <div class="stat-value">{{ roots|length }}</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Cycle Members</div>
+      <div class="stat-value">{{ cycle_members|length }}</div>
+    </div>
+  </div>
+
+
+  <!-- ── 1. Invalid rows ─────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="{{ invalid_rows|yesno:'true,false' }}" onclick="toggle(this)"
+      id="hdr-invalid">
+      <h2>
+        ⚠ Row-Level Validation Errors
+        <span class="badge {% if invalid_count %}red{% endif %}">{{ invalid_count }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body" {% if not invalid_rows %}hidden{% endif %}>
+      {% if invalid_rows %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Source Row</th>
+              <th>Employee ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Errors</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in invalid_rows %}
+            <tr>
+              <td class="row-num">{{ row.source_row }}</td>
+              <td class="mono">{{ row.raw.employee_id|default:"—" }}</td>
+              <td>{{ row.raw.employee_name|default:"—" }}</td>
+              <td class="mono">{{ row.raw.email|default:"—" }}</td>
+              <td>
+                {% for err in row.errors %}
+                <span class="err-pill">{{ err }}</span>
+                {% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">✓ No row-level validation errors.</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ── 2. Root employees ───────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="true" onclick="toggle(this)" id="hdr-roots">
+      <h2>
+        🌱 Root Employees (no manager)
+        <span class="badge green">{{ roots|length }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body">
+      {% if roots %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in roots %}
+            <tr>
+              <td class="mono">{{ emp.employee_id }}</td>
+              <td>{{ emp.employee_name }}</td>
+              <td class="mono">{{ emp.email }}</td>
+              <td>{{ emp.department }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">No root employees found.</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ── 3. Manager errors ───────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="{{ manager_errors|yesno:'true,false' }}" onclick="toggle(this)"
+      id="hdr-mgr-errors">
+      <h2>
+        ⛔ Manager Resolution Errors
+        <span class="badge {% if manager_errors %}yellow{% endif %}">{{ manager_errors|length }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body" {% if not manager_errors %}hidden{% endif %}>
+      {% if manager_errors %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in manager_errors %}
+            <tr>
+              <td class="mono">{{ item.employee }}</td>
+              <td class="err-text">{{ item.error }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">✓ All manager references resolved correctly.</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ── 4. Managers + direct reports ───────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="true" onclick="toggle(this)" id="hdr-managers">
+      <h2>
+        👥 Managers &amp; Direct Reports
+        <span class="badge blue">{{ managers|length }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body">
+      {% if managers %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Manager ID</th>
+              <th>Manager Name</th>
+              <th>Direct Reports</th>
+              <th>Reports</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mgr in managers %}
+            <tr>
+              <td class="mono">{{ mgr.employee_id }}</td>
+              <td>{{ mgr.employee_name }}</td>
+              <td style="text-align:center;font-weight:600;">{{ mgr.direct_report_count }}</td>
+              <td>
+                <div class="tag-list">
+                  {% for name in mgr.direct_report_names %}
+                  <span class="tag">{{ name }}</span>
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">No resolved manager relationships.</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ── 5. Reporting cycle members ─────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="{{ cycle_members|yesno:'true,false' }}" onclick="toggle(this)"
+      id="hdr-cycles">
+      <h2>
+        🔄 Reporting Cycle Members
+        <span class="badge {% if cycle_members %}red{% endif %}">{{ cycle_members|length }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body" {% if not cycle_members %}hidden{% endif %}>
+      <div style="padding:.75rem 1.5rem; border-bottom:1px solid var(--border);">
+        <small style="color:var(--muted);">
+          These employees are inside a circular reporting chain. Employees who merely report into a cycle are not included.
+        </small>
+      </div>
+      {% if cycle_members %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in cycle_members %}
+            <tr>
+              <td class="mono">{{ emp.employee_id }}</td>
+              <td>{{ emp.employee_name }}</td>
+              <td class="mono">{{ emp.email }}</td>
+              <td>{{ emp.department }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">✓ No reporting cycles detected.</div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ── 6. Reporting cycle participants ─────────────────────────────────── -->
+  <div class="section">
+    <div class="section-header" aria-expanded="{{ reporting_cycle_participants|yesno:'true,false' }}"
+      onclick="toggle(this)" id="hdr-participants">
+      <h2>
+        📊 Employees in a Reporting Cycle
+        <span class="badge {% if reporting_cycle_participants %}red{% endif %}">{{ reporting_cycle_participants|length
+          }}</span>
+      </h2>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body" {% if not reporting_cycle_participants %}hidden{% endif %}>
+      <div style="padding:.75rem 1.5rem; border-bottom:1px solid var(--border);">
+        <small style="color:var(--muted);">
+          Includes employees who are <em>inside</em> a cycle AND employees whose
+          ancestor chain leads into a cycle — i.e., all employees that participate
+          in a reporting cycle.
+        </small>
+      </div>
+      {% if reporting_cycle_participants %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in reporting_cycle_participants %}
+            <tr>
+              <td class="mono">{{ emp.employee_id }}</td>
+              <td>{{ emp.employee_name }}</td>
+              <td class="mono">{{ emp.email }}</td>
+              <td>{{ emp.department }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">✓ No employees participate in a reporting cycle.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    function toggle(header) {
+      const expanded = header.getAttribute('aria-expanded') === 'true';
+      header.setAttribute('aria-expanded', String(!expanded));
+      const body = header.nextElementSibling;
+      if (expanded) body.setAttribute('hidden', '');
+      else body.removeAttribute('hidden');
+    }
+  </script>
+</body>
+
+</html>

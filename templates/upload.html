@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRIS Import Preview — Diversio</title>
+  <meta name="description" content="Upload an HRIS CSV export to preview employees, hierarchy, and data quality before import." />
+  <style>
+    /* ── Design tokens ───────────────────────────────────────────────────── */
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2a2d3a;
+      --accent:   #6c63ff;
+      --accent2:  #4ecdc4;
+      --text:     #e2e8f0;
+      --muted:    #8892a4;
+      --danger:   #ff6b6b;
+      --radius:   12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    /* ── Card ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 3rem;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.45);
+    }
+
+    /* ── Logo / heading ─────────────────────────────────────────────────── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 2rem;
+    }
+    .logo-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      flex-shrink: 0;
+    }
+    .logo h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+    .logo span { color: var(--muted); font-weight: 400; font-size: 1rem; }
+
+    p.subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Drop zone ──────────────────────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      text-align: center;
+      transition: border-color .2s, background .2s;
+      cursor: pointer;
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over { border-color: var(--accent); background: rgba(108,99,255,.06); }
+
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 2.5rem;
+      margin-bottom: .75rem;
+    }
+    .drop-zone h2 { font-size: 1rem; margin-bottom: .4rem; }
+    .drop-zone p  { color: var(--muted); font-size: .8rem; }
+    #file-name-display { color: var(--accent2); font-size: .85rem; margin-top: .5rem; min-height: 1.2em; }
+
+    /* ── Button ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .85rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      letter-spacing: .02em;
+    }
+    .btn:hover { opacity: .9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    /* ── Error banner ───────────────────────────────────────────────────── */
+    .error-banner {
+      background: rgba(255,107,107,.12);
+      border: 1px solid var(--danger);
+      border-radius: 8px;
+      padding: .9rem 1.1rem;
+      color: var(--danger);
+      font-size: .88rem;
+      display: flex;
+      gap: .6rem;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+    .error-banner svg { flex-shrink: 0; margin-top: 2px; }
+
+    /* ── Footer note ─────────────────────────────────────────────────────── */
+    .note {
+      text-align: center;
+      color: var(--muted);
+      font-size: .78rem;
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <h1>Diversio <span>HRIS Import Preview</span></h1>
+    </div>
+
+    <p class="subtitle">
+      Upload an HRIS CSV export to inspect the file structure, validate employee
+      data, and preview the reporting hierarchy — before any data is written to
+      the platform.
+    </p>
+
+    {% if error %}
+    <div class="error-banner" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'preview' %}">
+      {% csrf_token %}
+
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" name="csv_file" id="csv_file" accept=".csv" required />
+        <div class="drop-icon">📂</div>
+        <h2>Drop your CSV here or click to browse</h2>
+        <p>Accepts .csv files up to 10 MB &middot; UTF-8 with or without BOM</p>
+        <div id="file-name-display"></div>
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">Preview Import</button>
+    </form>
+
+    <p class="note">
+      Required columns: employee_id &middot; employee_name &middot; email &middot;
+      manager_id &middot; manager_email &middot; department
+    </p>
+  </div>
+
+  <script>
+    const input   = document.getElementById('csv_file');
+    const display = document.getElementById('file-name-display');
+    const zone    = document.getElementById('drop-zone');
+
+    input.addEventListener('change', () => {
+      display.textContent = input.files[0] ? input.files[0].name : '';
+    });
+
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        display.textContent = input.files[0].name;
+      }
+    });
+  </script>
+</body>
+</html>
