@@ -303,7 +303,7 @@ All three are inside the cycle. No employee merely reports *into* the cycle with
 
 ## AI Tools Used
 
-**Google Antigravity (Gemini / Claude Sonnet)** was used throughout:
+**Google Antigravity (Gemini and Claude Sonnet)** was used throughout:
 
 - Scaffolding the Django project structure and module split.
 - Writing the initial versions of `parser.py`, `analyser.py`, `views.py`, and tests.
